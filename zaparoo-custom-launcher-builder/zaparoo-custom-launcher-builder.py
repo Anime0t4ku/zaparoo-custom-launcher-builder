@@ -10,6 +10,40 @@ import ctypes
 CONFIG_FILE = "config.json"
 
 # -----------------------------
+# Supported Zaparoo Systems
+# -----------------------------
+SYSTEMS = [
+"3DO","3DS","AcornAtom","AcornElectron","AdventureVision","AliceMC10","Amiga",
+"Amiga1200","Amiga500","AmigaCD32","Amstrad","AmstradPCW","Android","Apogee",
+"AppleI","AppleII","Aquarius","Arcade","Arcadia","Archimedes","Arduboy",
+"Astrocade","Atari2600","Atari5200","Atari7800","Atari800","AtariLynx",
+"AtariST","AtariXEGS","Atomiswave","Audio","BBCMicro","BK0011M","C16","C64",
+"CDI","CPS1","CPS2","CPS3","CasioPV1000","CasioPV2000","ChannelF","Chihiro",
+"Chip8","CoCo2","ColecoAdam","ColecoVision","CommanderX16","CreatiVision",
+"DAPHNE","DICE","DOS","Dreamcast","EDSAC","FDS","FM7","FMTowns","GBA","GBA2P",
+"GP32","Gaelco","Galaksija","Gamate","GameCom","GameCube","GameGear",
+"GameMaster","GameNWatch","GamePocket","Gameboy","Gameboy2P","GameboyColor",
+"Genesis","GenesisMSU","Groovy","Hikaru","Image","Intellivision","Interact",
+"J2ME","Jaguar","JaguarCD","Jupiter","Laser","Lindbergh","Lynx48","MSX",
+"MSX1","MSX2","MSX2Plus","MacOS","MacPlus","MasterSystem","MegaCD","MegaDuck",
+"Model1","Model2","Model3","Movie","MultiComp","Multivision","MusicAlbum",
+"MusicArtist","MusicTrack","NAOMI","NAOMI2","NDS","NES","NESMusic","NGage",
+"Namco22","Namco2X6","NeoGeo","NeoGeoAES","NeoGeoCD","NeoGeoMVS",
+"NeoGeoPocket","NeoGeoPocketColor","Nintendo64","Odyssey2","Orao","Oric",
+"Ouya","PC","PC88","PC98","PCFX","PCXT","PDP1","PET2001","PMD85","PS2","PS3",
+"PS4","PSP","PSX","Pico8","PlugNPlay","PocketChallengeV2","PokemonMini",
+"QL","RX78","SAMCoupe","SG1000","SGBMSU1","SNES","SNESMSU1","SNESMusic",
+"SVI328","Saturn","ScummVM","Sega32X","Singe","Socrates","SordM5",
+"Specialist","Spectravideo","Sufami","SuperACan","SuperGameboy","SuperGrafx",
+"SuperVision","Switch","TI994A","TIC80","TRS80","TSConf","TVEpisode",
+"TVShow","TatungEinstein","Thomson","TomyTutor","Triforce","TurboGrafx16",
+"TurboGrafx16CD","UK101","VC4000","VIC20","VSmile","Vector06C","Vectrex",
+"Video","VideopacPlus","VirtualBoy","Vita","Wii","WiiU","Windows",
+"WonderSwan","WonderSwanColor","X1","X68000","Xbox","Xbox360","XboxOne",
+"ZX81","ZXNext","ZXSpectrum"
+]
+
+# -----------------------------
 # Windows App Identity
 # -----------------------------
 try:
@@ -20,7 +54,7 @@ except Exception:
     pass
 
 # -----------------------------
-# Resource Path
+# Resource Path (PyInstaller Safe)
 # -----------------------------
 def resource_path(relative_path):
     try:
@@ -58,7 +92,7 @@ def load_config():
             if "launchers_folder" in data and os.path.exists(data["launchers_folder"]):
                 custom_root_path.set(data["launchers_folder"])
                 location_mode.set("Custom")
-        except:
+        except Exception:
             pass
 
 def save_config():
@@ -111,24 +145,15 @@ def update_ui(*args):
         core_widgets(False)
     else:
         emulator_widgets(True)
-        if is_retroarch():
-            core_widgets(True)
-        else:
-            core_widgets(False)
+        core_widgets(is_retroarch())
 
 def emulator_widgets(show=False):
     for w in emulator_row_widgets:
-        if show:
-            w.grid()
-        else:
-            w.grid_remove()
+        w.grid() if show else w.grid_remove()
 
 def core_widgets(show=False):
     for w in core_row_widgets:
-        if show:
-            w.grid()
-        else:
-            w.grid_remove()
+        w.grid() if show else w.grid_remove()
 
 def update_location_ui(*args):
     state = "normal" if location_mode.get() == "Custom" else "disabled"
@@ -159,23 +184,19 @@ def generate_launcher():
         return
 
     os.makedirs(folder, exist_ok=True)
-
     escaped_rom = escape_windows_path(rom)
 
-    # Launcher ID
     if launcher_type.get() == "Emulator":
         emu = emulator_path.get().strip()
         if not emu:
             messagebox.showerror("Missing Emulator", "Select an emulator.")
             return
 
-        emu_name = os.path.splitext(os.path.basename(emu))[0]
-        emu_name = clean_emulator_name(emu_name)
+        emu_name = clean_emulator_name(os.path.splitext(os.path.basename(emu))[0])
         launcher_id = emu_name + sanitize_id(system)
     else:
         launcher_id = sanitize_id(system) + "DIRECT"
 
-    # Execute
     if launcher_type.get() == "Direct":
         execute = (
             "powershell -WindowStyle Hidden -NoProfile "
@@ -183,8 +204,7 @@ def generate_launcher():
             "Start-Process -FilePath '[[media_path]]'"
         )
     else:
-        emu = emulator_path.get().strip()
-        escaped_emu = escape_windows_path(emu)
+        escaped_emu = escape_windows_path(emulator_path.get())
 
         if is_retroarch():
             if not core_path.get():
@@ -192,7 +212,6 @@ def generate_launcher():
                 return
 
             escaped_core = escape_windows_path(core_path.get())
-
             execute = (
                 "powershell -WindowStyle Hidden -NoProfile "
                 "-ExecutionPolicy Bypass -Command "
@@ -207,14 +226,10 @@ def generate_launcher():
                 f"-ArgumentList '\\\"[[media_path]]\\\"'"
             )
 
-    # Extensions
-    clean_exts = []
-    for e in exts.split(","):
-        e = e.strip()
-        if not e.startswith("."):
-            e = "." + e
-        clean_exts.append(f'"{e}"')
-    file_exts = ",".join(clean_exts)
+    file_exts = ",".join(
+        f'"{("." + e.strip().lstrip("."))}"'
+        for e in exts.split(",")
+    )
 
     toml = f"""[[launchers.custom]]
 id = "{launcher_id}"
@@ -240,17 +255,17 @@ execute = "{execute}"
 # -----------------------------
 def open_launchers_folder():
     folder = get_launchers_folder()
-    if not folder or not os.path.exists(folder):
+    if folder and os.path.exists(folder):
+        subprocess.Popen(["explorer", folder])
+    else:
         messagebox.showerror("Error", "Launchers folder does not exist.")
-        return
-    subprocess.Popen(["explorer", folder])
 
 # -----------------------------
 # UI Setup
 # -----------------------------
 root = tk.Tk()
-root.title("Zaparoo Custom Launcher Builder v1.0.1")
-root.geometry("720x540")
+root.title("Zaparoo Custom Launcher Builder v1.0.2")
+root.geometry("720x560")
 root.resizable(False, False)
 
 try:
@@ -290,30 +305,27 @@ ttk.Entry(main, textvariable=filename_var).grid(row=row, column=1, sticky="ew")
 row += 1
 
 ttk.Label(main, text="System").grid(row=row, column=0, sticky="w", pady=8)
-ttk.Entry(main, textvariable=system_var).grid(row=row, column=1, sticky="ew")
+system_dropdown = ttk.Combobox(main, textvariable=system_var, values=SYSTEMS, state="readonly")
+system_dropdown.grid(row=row, column=1, sticky="ew")
 row += 1
 
-# Emulator Path
+# Emulator
 emulator_label = ttk.Label(main, text="Emulator Path")
 emulator_entry = ttk.Entry(main, textvariable=emulator_path)
 emulator_button = ttk.Button(main, text="Browse", command=browse_emulator)
-
 emulator_label.grid(row=row, column=0, sticky="w", pady=8)
 emulator_entry.grid(row=row, column=1, sticky="ew")
 emulator_button.grid(row=row, column=2)
-
 emulator_row_widgets = [emulator_label, emulator_entry, emulator_button]
 row += 1
 
-# RetroArch Core (moved here)
+# RetroArch Core
 core_label = ttk.Label(main, text="RetroArch Core Path")
 core_entry = ttk.Entry(main, textvariable=core_path)
 core_button = ttk.Button(main, text="Browse", command=browse_core)
-
 core_label.grid(row=row, column=0, sticky="w", pady=8)
 core_entry.grid(row=row, column=1, sticky="ew")
 core_button.grid(row=row, column=2)
-
 core_row_widgets = [core_label, core_entry, core_button]
 row += 1
 
