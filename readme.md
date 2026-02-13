@@ -9,6 +9,8 @@ Supports:
 
 Simple, clean, repeatable launcher generation without manually editing TOML files.
 
+![Screenshot](assets/screenshot.png)
+
 ---
 
 ## Download (Windows)
