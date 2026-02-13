@@ -1,6 +1,6 @@
 # Zaparoo Custom Launcher Builder
 
-Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating `launchers.custom` TOML files for Zaparoo.
+Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating Custom Launcher files for Zaparoo.
 
 Supports:
 - Emulator launchers  
@@ -18,9 +18,6 @@ Download the latest automatic build:
 | Platform | Status | Download |
 |----------|--------|----------|
 | Windows | ![Build Status](https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/actions/workflows/build.yaml/badge.svg) | [Download Pre-release](https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/releases/download/Pre-release/Zaparoo-Custom-Launcher-Builder-Windows-x86_64.zip) |
-
-Workflow:  
-https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/actions/workflows/build.yaml
 
 ---
 
