@@ -1,6 +1,6 @@
 # Zaparoo Custom Launcher Builder
 
-Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating Custom Launcher files for Zaparoo.
+Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating Custom Launcher files for Zaparoo on Windows (Linux support in the future).
 
 Supports:
 - Emulator launchers  
