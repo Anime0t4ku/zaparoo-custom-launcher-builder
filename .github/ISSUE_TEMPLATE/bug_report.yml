@@ -1,0 +1,68 @@
+name: Bug Report
+description: Report a problem with Zaparoo Custom Launcher Builder
+title: "[Bug]: "
+labels: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug.
+        Please fill out the information below to help diagnose the issue.
+
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: Which version are you using?
+      options:
+        - Windows Pre-release (GitHub build)
+        - Running from Python source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Launcher Mode
+      description: Which launcher type were you using?
+      options:
+        - Emulator
+        - RetroArch
+        - Direct / Shortcut
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Open the application
+        2. Select Emulator mode
+        3. Set ROM directory to...
+        4. Click Generate
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message (if any)
+      description: Paste any error messages shown.
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add screenshots or extra details if needed.
