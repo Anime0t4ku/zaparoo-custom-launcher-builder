@@ -19,9 +19,6 @@ Download the latest automatic build:
 |----------|--------|----------|
 | Windows | ![Build Status](https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/actions/workflows/build.yaml/badge.svg) | [Download Pre-release](https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/releases/download/Pre-release/Zaparoo-Custom-Launcher-Builder-Windows-x86_64.zip) |
 
-Workflow:  
-https://github.com/Anime0t4ku/zaparoo-custom-launcher-builder/actions/workflows/build.yaml
-
 ---
 
 ## Python Requirements
