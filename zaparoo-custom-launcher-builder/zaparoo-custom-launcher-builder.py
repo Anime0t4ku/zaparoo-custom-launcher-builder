@@ -10,7 +10,7 @@ import ctypes
 CONFIG_FILE = "config.json"
 
 # -----------------------------
-# Windows App Identity (Taskbar Icon Fix)
+# Windows App Identity
 # -----------------------------
 try:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
@@ -20,7 +20,7 @@ except Exception:
     pass
 
 # -----------------------------
-# Resource Path (PyInstaller Safe)
+# Resource Path
 # -----------------------------
 def resource_path(relative_path):
     try:
@@ -35,6 +35,9 @@ def resource_path(relative_path):
 def sanitize_id(name):
     return re.sub(r'[^A-Za-z0-9]', '', name).upper()
 
+def sanitize_filename(name):
+    return re.sub(r'[<>:"/\\|?*]', '', name).strip()
+
 def escape_windows_path(path):
     path = os.path.normpath(path)
     return path.replace("\\", "\\\\")
@@ -43,35 +46,33 @@ def clean_emulator_name(name):
     name = name.lower().replace("-qt", "").replace("_qt", "")
     return sanitize_id(name)
 
+# -----------------------------
+# Config Handling
+# -----------------------------
 def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if "custom_root" in data and os.path.exists(data["custom_root"]):
-                custom_root_path.set(data["custom_root"])
+
+            if "launchers_folder" in data and os.path.exists(data["launchers_folder"]):
+                custom_root_path.set(data["launchers_folder"])
                 location_mode.set("Custom")
         except:
             pass
 
 def save_config():
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump({"custom_root": custom_root_path.get()}, f, indent=4)
+        json.dump({"launchers_folder": custom_root_path.get()}, f, indent=4)
 
 def get_launchers_folder():
     if location_mode.get() == "Default":
         return os.path.join(os.getenv("LOCALAPPDATA"), "zaparoo", "launchers")
 
-    root = custom_root_path.get().strip()
-    if not root:
+    folder = custom_root_path.get().strip()
+    if not folder:
         return ""
-
-    root = os.path.normpath(root)
-
-    if os.path.basename(root).lower() == "user":
-        return os.path.join(root, "launchers")
-
-    return os.path.join(root, "user", "launchers")
+    return os.path.normpath(folder)
 
 # -----------------------------
 # Browse Functions
@@ -91,7 +92,7 @@ def browse_core():
     if path:
         core_path.set(path)
 
-def browse_zaparoo_root():
+def browse_launchers_folder():
     path = filedialog.askdirectory()
     if path:
         custom_root_path.set(path)
@@ -99,7 +100,7 @@ def browse_zaparoo_root():
         save_config()
 
 # -----------------------------
-# Logic
+# UI Logic
 # -----------------------------
 def is_retroarch():
     return "retroarch" in emulator_path.get().lower()
@@ -129,21 +130,39 @@ def core_widgets(show=False):
         else:
             w.grid_remove()
 
+def update_location_ui(*args):
+    state = "normal" if location_mode.get() == "Custom" else "disabled"
+    custom_entry.configure(state=state)
+    custom_button.configure(state=state)
+
 # -----------------------------
 # Launcher Generation
 # -----------------------------
 def generate_launcher():
+    filename = filename_var.get().strip()
     system = system_var.get().strip()
     rom = rom_path.get().strip()
     exts = extensions_var.get().strip()
 
-    if not system or not rom or not exts:
+    if not filename or not system or not rom or not exts:
         messagebox.showerror("Missing Fields", "Please fill all required fields.")
         return
 
+    filename = sanitize_filename(filename)
+    if not filename:
+        messagebox.showerror("Invalid Filename", "Filename contains invalid characters.")
+        return
+
+    folder = get_launchers_folder()
+    if not folder:
+        messagebox.showerror("Invalid Folder", "Please select a valid launchers folder.")
+        return
+
+    os.makedirs(folder, exist_ok=True)
+
     escaped_rom = escape_windows_path(rom)
 
-    # ID
+    # Launcher ID
     if launcher_type.get() == "Emulator":
         emu = emulator_path.get().strip()
         if not emu:
@@ -205,49 +224,35 @@ file_exts = [{file_exts}]
 execute = "{execute}"
 """
 
-    save_launcher(toml, launcher_id)
-
-# -----------------------------
-# Save / Open
-# -----------------------------
-def save_launcher(toml_content, launcher_id):
-    folder = get_launchers_folder()
-
-    if not folder:
-        messagebox.showerror("Error", "Invalid Zaparoo folder.")
-        return
-
-    os.makedirs(folder, exist_ok=True)
-
-    file_path = os.path.join(folder, f"{launcher_id}.toml")
+    file_path = os.path.join(folder, f"{filename}.toml")
 
     if os.path.exists(file_path):
-        if not messagebox.askyesno("Launcher Exists", f"{launcher_id}.toml exists.\nOverwrite?"):
+        if not messagebox.askyesno("Launcher Exists", f"{filename}.toml exists.\nOverwrite?"):
             return
 
     with open(file_path, "w", encoding="utf-8") as f:
-        f.write(toml_content)
+        f.write(toml)
 
     messagebox.showinfo("Success", f"Launcher saved to:\n{file_path}")
 
+# -----------------------------
+# Open Folder
+# -----------------------------
 def open_launchers_folder():
     folder = get_launchers_folder()
-
     if not folder or not os.path.exists(folder):
         messagebox.showerror("Error", "Launchers folder does not exist.")
         return
-
     subprocess.Popen(["explorer", folder])
 
 # -----------------------------
 # UI Setup
 # -----------------------------
 root = tk.Tk()
-root.title("Zaparoo Custom Launcher Builder v1.0")
-root.geometry("720x520")
+root.title("Zaparoo Custom Launcher Builder v1.0.1")
+root.geometry("720x540")
 root.resizable(False, False)
 
-# Set PNG window icon
 try:
     icon_path = resource_path("icon.png")
     icon_image = tk.PhotoImage(file=icon_path)
@@ -255,15 +260,16 @@ try:
 except Exception:
     pass
 
+filename_var = tk.StringVar()
 system_var = tk.StringVar()
 emulator_path = tk.StringVar()
 rom_path = tk.StringVar()
 extensions_var = tk.StringVar()
 core_path = tk.StringVar()
+custom_root_path = tk.StringVar()
 
 launcher_type = tk.StringVar(value="Emulator")
 location_mode = tk.StringVar(value="Default")
-custom_root_path = tk.StringVar()
 
 main = ttk.Frame(root, padding=25)
 main.pack(fill="both", expand=True)
@@ -279,10 +285,15 @@ ttk.Radiobutton(main, text="Emulator", variable=launcher_type, value="Emulator")
 ttk.Radiobutton(main, text="Direct / Shortcut", variable=launcher_type, value="Direct").grid(row=row, column=1, padx=150, sticky="w")
 row += 1
 
+ttk.Label(main, text="Filename (without .toml)").grid(row=row, column=0, sticky="w", pady=8)
+ttk.Entry(main, textvariable=filename_var).grid(row=row, column=1, sticky="ew")
+row += 1
+
 ttk.Label(main, text="System").grid(row=row, column=0, sticky="w", pady=8)
 ttk.Entry(main, textvariable=system_var).grid(row=row, column=1, sticky="ew")
 row += 1
 
+# Emulator Path
 emulator_label = ttk.Label(main, text="Emulator Path")
 emulator_entry = ttk.Entry(main, textvariable=emulator_path)
 emulator_button = ttk.Button(main, text="Browse", command=browse_emulator)
@@ -294,11 +305,7 @@ emulator_button.grid(row=row, column=2)
 emulator_row_widgets = [emulator_label, emulator_entry, emulator_button]
 row += 1
 
-ttk.Label(main, text="ROM Directory").grid(row=row, column=0, sticky="w", pady=8)
-ttk.Entry(main, textvariable=rom_path).grid(row=row, column=1, sticky="ew")
-ttk.Button(main, text="Browse", command=browse_rom_dir).grid(row=row, column=2)
-row += 1
-
+# RetroArch Core (moved here)
 core_label = ttk.Label(main, text="RetroArch Core Path")
 core_entry = ttk.Entry(main, textvariable=core_path)
 core_button = ttk.Button(main, text="Browse", command=browse_core)
@@ -310,19 +317,29 @@ core_button.grid(row=row, column=2)
 core_row_widgets = [core_label, core_entry, core_button]
 row += 1
 
+# ROM Directory
+ttk.Label(main, text="ROM Directory").grid(row=row, column=0, sticky="w", pady=8)
+ttk.Entry(main, textvariable=rom_path).grid(row=row, column=1, sticky="ew")
+ttk.Button(main, text="Browse", command=browse_rom_dir).grid(row=row, column=2)
+row += 1
+
+# Extensions
 ttk.Label(main, text="File Extensions (iso,zip,lnk)").grid(row=row, column=0, sticky="w", pady=8)
 ttk.Entry(main, textvariable=extensions_var).grid(row=row, column=1, sticky="ew")
 row += 1
 
-ttk.Label(main, text="Zaparoo Location").grid(row=row, column=0, sticky="w", pady=12)
+# Location
+ttk.Label(main, text="Launchers Location").grid(row=row, column=0, sticky="w", pady=12)
 location_frame = ttk.Frame(main)
 location_frame.grid(row=row, column=1, sticky="w")
 ttk.Radiobutton(location_frame, text="Default (AppData Local)", variable=location_mode, value="Default").pack(anchor="w")
 ttk.Radiobutton(location_frame, text="Custom Folder", variable=location_mode, value="Custom").pack(anchor="w")
 row += 1
 
-ttk.Entry(main, textvariable=custom_root_path).grid(row=row, column=1, sticky="ew")
-ttk.Button(main, text="Browse", command=browse_zaparoo_root).grid(row=row, column=2)
+custom_entry = ttk.Entry(main, textvariable=custom_root_path)
+custom_entry.grid(row=row, column=1, sticky="ew")
+custom_button = ttk.Button(main, text="Browse", command=browse_launchers_folder)
+custom_button.grid(row=row, column=2)
 row += 1
 
 button_frame = ttk.Frame(main)
@@ -332,8 +349,10 @@ ttk.Button(button_frame, text="Open Launchers Folder", width=28, command=open_la
 
 launcher_type.trace_add("write", update_ui)
 emulator_path.trace_add("write", update_ui)
+location_mode.trace_add("write", update_location_ui)
 
 load_config()
 update_ui()
+update_location_ui()
 
 root.mainloop()
