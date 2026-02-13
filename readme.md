@@ -1,6 +1,6 @@
 # Zaparoo Custom Launcher Builder
 
-Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating `launchers.custom` TOML files for Zaparoo.
+Zaparoo Custom Launcher Builder is a lightweight GUI tool for generating Custom Launcher files for Zaparoo.
 
 Supports:
 - Emulator launchers  
